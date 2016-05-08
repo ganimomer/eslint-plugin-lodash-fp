@@ -1,8 +1,8 @@
 'use strict';
 
-var values = require('lodash.values');
+var _ = require('lodash/fp');
 var enhance = require('./core/enhance');
-var isStaticRequire = require('./core/staticRequire');
+var isStaticRequire = require('./core/static-require');
 
 function isLodash(name) {
   return name === 'lodash' || name === 'lodash/fp';
@@ -34,11 +34,12 @@ module.exports = function (context) {
       }
     },
     'Program:exit': function () {
-      var importValues = values(info.imports);
+      var importValues = _.values(info.imports);
       if (// `lodash`/`lodash/fp` was imported
-          (importValues.indexOf('') !== -1 || importValues.indexOf('fp') !== -1) &&
-          // but <expectedName> does not refer to either `lodash` or `lodash/fp`
-          !info.is(expectedName, 'lodash', true)) {
+        (importValues.indexOf('') !== -1 || importValues.indexOf('fp') !== -1) &&
+        // but <expectedName> does not refer to either `lodash` or `lodash/fp`
+        !info.helpers.isAnyLodash(expectedName)
+      ) {
         context.report(importNode, 'Lodash should be imported as `' + expectedName + '`');
       }
     }

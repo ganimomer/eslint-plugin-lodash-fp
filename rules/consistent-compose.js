@@ -1,24 +1,10 @@
 'use strict';
 
+var _ = require('lodash/fp');
 var enhance = require('./core/enhance');
 
-var composeMethods = ['compose', 'flow', 'flowRight', 'pipe'];
-function getComposeMethod(info, name) {
-  var index = composeMethods.indexOf(name);
-  return composeMethods[index] || false;
-}
-
-function isMemberCall(info, node) {
-  return node.type === 'MemberExpression' &&
-    info.is(node.object.name, 'lodash') &&
-    getComposeMethod(info, node.property.name);
-}
-
-function isCall(info, node) {
-  return node.type === 'Identifier' &&
-    info.imports[node.name] !== undefined &&
-    getComposeMethod(info, node.name);
-}
+var knownComposeMethods = ['flow', 'flowRight', 'compose', 'pipe'];
+var isKnownComposeMethod = _.includes(_, knownComposeMethods);
 
 module.exports = function (context) {
   var info = enhance();
@@ -29,10 +15,9 @@ module.exports = function (context) {
 
   return info.merge({
     CallExpression: function (node) {
-      var callee = node.callee;
-      var name = isMemberCall(info, callee) || isCall(info, callee);
-      if (name !== false && name !== composeMethod) {
-        context.report(node, 'Forbidden use of `' + name + '`. Use `' + composeMethod + '` instead');
+      var method = info.helpers.isMethodCall(node);
+      if (method && isKnownComposeMethod(method.name) && method.name !== composeMethod) {
+        context.report(node, 'Forbidden use of `' + method.name + '`. Use `' + composeMethod + '` instead');
       }
     }
   });
@@ -40,5 +25,5 @@ module.exports = function (context) {
 
 module.exports.schema = [{
   type: 'string',
-  enum: ['flow', 'flowRight', 'compose', 'pipe']
+  enum: knownComposeMethods
 }];
